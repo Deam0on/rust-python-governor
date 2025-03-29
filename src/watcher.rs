@@ -1,7 +1,8 @@
-use notify::{watcher, DebouncedEvent, RecursiveMode, Watcher};
+// src/watcher.rs
+
+use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
 use std::sync::mpsc::channel;
-use std::time::Duration;
 use std::thread;
 use log::info;
 
@@ -11,7 +12,8 @@ where
 {
     let (tx, rx) = channel();
 
-    let mut watcher = watcher(tx, Duration::from_secs(2)).expect("Failed to create watcher");
+    // RecommendedWatcher is the unified async watcher interface in notify v6
+    let mut watcher: RecommendedWatcher = Watcher::new(tx, Config::default()).expect("Failed to initialize watcher");
     watcher
         .watch(path, RecursiveMode::Recursive)
         .expect("Failed to watch path");
@@ -19,17 +21,20 @@ where
     info!("Watching directory: {}", path.display());
 
     thread::spawn(move || {
-        for event in rx {
-            match event {
-                DebouncedEvent::Create(path) | DebouncedEvent::Write(path) => {
-                    if let Some(ext) = path.extension() {
-                        if ext == "yaml" || ext == "json" {
-                            info!("Detected new task file: {}", path.display());
-                            callback(path.to_string_lossy().into_owned());
+        for res in rx {
+            match res {
+                Ok(Event { kind: EventKind::Create(_) | EventKind::Modify(_), paths, .. }) => {
+                    for path in paths {
+                        if let Some(ext) = path.extension() {
+                            if ext == "yaml" || ext == "json" {
+                                info!("Detected task file: {}", path.display());
+                                callback(path.to_string_lossy().into_owned());
+                            }
                         }
                     }
                 }
-                _ => {}
+                Ok(_) => {}
+                Err(e) => eprintln!("watch error: {e}"),
             }
         }
     });
