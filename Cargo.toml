@@ -1,0 +1,14 @@
+[package]
+name = "rust_python_tasker"
+version = "0.1.0"
+edition = "2021"
+
+description = "Hybrid Rust + Python task queue system"
+authors = ["Your Name <you@example.com>"]
+license = "MIT"
+
+[dependencies]
+notify = "6.1"
+log = "0.4"
+env_logger = "0.10"
+chrono = "0.4"

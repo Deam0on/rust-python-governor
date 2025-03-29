@@ -1,0 +1,4 @@
+script: task_script.py
+params:
+  message: "Hello from hybrid task system!"
+  repeat: 3
